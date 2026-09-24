@@ -1,75 +1,65 @@
-# React + TypeScript + Vite
+# Habit Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A small habit-tracking app built with React, Vite, Tailwind CSS, and Supabase. The app lets each signed-in user manage their own habits safely with auth protection and row-level security.
 
-Currently, two official plugins are available:
+## What this project does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- User sign-up and sign-in with Supabase Auth
+- Protected routes so unauthenticated users are redirected to /login
+- CRUD operations for habits using fetch instead of axios
+- Simple black-and-white UI styling with Tailwind
+- User-specific access patterns so one account cannot see another account's habits
 
-## React Compiler
+## Project structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```text
+src/
+  components/
+    AuthPage.tsx
+    HabitTracker.tsx
+    ProtectedRoute.tsx
+  lib/
+    supabase.js
+  types.ts
+  App.tsx
+  index.css
+.env
+.env.example
+supabase-schema.sql
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Copy `.env.example` to `.env`
+2. Add your Supabase values:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Run the SQL from `supabase-schema.sql` inside your Supabase SQL editor
+4. Start the app:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev
 ```
+
+## Notes
+
+This app is intentionally designed around per-user security. Every habit query and mutation should be scoped to the logged-in user, and the Supabase table policies should enforce that at database level.
+
+## Screenshot
+
+### Signed-in account → habit list
+
+![userA](./src/assets/userA.png)
+
+### Second account → empty habit list
+
+![userB](./src/assets/userB.png)
+
+### SQL Editor → both policies
+
+![policy](./src/assets/policy.png)
+
+### One Sentence
+
+Without RLS, an attacker could potentially access, modify, or delete other users’ habits by bypassing the app’s frontend restrictions.
