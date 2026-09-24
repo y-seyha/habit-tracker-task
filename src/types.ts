@@ -7,6 +7,12 @@ export type Habit = {
   created_at: string;
 };
 
+export type Profile = {
+  id: string;
+  avatar_url: string | null;
+  updated_at?: string;
+};
+
 export type HabitForm = {
   name: string;
   description: string;
@@ -18,3 +24,5 @@ export const emptyHabitForm: HabitForm = {
   description: "",
   completed: false,
 };
+
+export const MAX_AVATAR_SIZE_BYTES = 1024 * 1024;
