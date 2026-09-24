@@ -12,7 +12,12 @@ export default function AuthPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+
+      console.log("Session:", data.session);
+      console.log("User ID:", data.session?.user.id);
+      console.log("Session error:", error);
+
       if (data.session) {
         navigate("/", { replace: true });
       }

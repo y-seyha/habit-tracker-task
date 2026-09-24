@@ -78,5 +78,93 @@ using (auth.uid() = user_id);
 --   ('11111111-1111-1111-1111-111111111111', 1, current_date, true),
 --   ('11111111-1111-1111-1111-111111111111', 2, current_date, true);
 
--- 6) Example query to prove a user only sees their own rows
+-- 6) profiles table for user avatar metadata
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  avatar_url text,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, avatar_url)
+  values (new.id, null)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+drop policy if exists "Users can view their own profile" on public.profiles;
+create policy "Users can view their own profile"
+on public.profiles for select
+to authenticated
+using (auth.uid() = id);
+
+drop policy if exists "Users can create their own profile" on public.profiles;
+create policy "Users can create their own profile"
+on public.profiles for insert
+to authenticated
+with check (auth.uid() = id);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
+on public.profiles for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
+
+-- 7) avatars bucket for user profile images
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+create policy "Users can view avatars in their own folder"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+create policy "Users can upload avatars to their own folder"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'avatars'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+create policy "Users can update avatars in their own folder"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and auth.uid()::text = (storage.foldername(name))[1]
+)
+with check (
+  bucket_id = 'avatars'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+create policy "Users can delete avatars in their own folder"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Example query to prove a user only sees their own rows
 -- select * from public.habits where user_id = auth.uid();
