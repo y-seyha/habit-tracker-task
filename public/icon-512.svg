@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Habit Tracker app icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <rect x="132" y="132" width="248" height="248" rx="66" fill="#ffffff" fill-opacity="0.12"/>
+  <path d="M164 252h184c14.4 0 26 11.6 26 26v4c0 14.4-11.6 26-26 26H164c-14.4 0-26-11.6-26-26v-4c0-14.4 11.6-26 26-26Z" fill="#ffffff" opacity="0.96"/>
+  <path d="M176 194h160c23 0 42 19 42 42v28H134v-28c0-23 19-42 42-42Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M206 158h100c14.4 0 26 11.6 26 26v49H180v-49c0-14.4 11.6-26 26-26Z" fill="#ffffff" opacity="0.84"/>
+  <path d="M216 326c11.6 0 21 9.4 21 21v10H175v-10c0-11.6 9.4-21 21-21h20Zm80 0c11.6 0 21 9.4 21 21v10h-62v-10c0-11.6 9.4-21 21-21h20Z" fill="#ffffff" opacity="0.8"/>
+  <circle cx="256" cy="204" r="32" fill="#fbbf24"/>
+</svg>

@@ -14,6 +14,29 @@ import ErrorBoundary from "./ErrorBoundary";
 import type { Habit, HabitForm } from "../types";
 import { MAX_AVATAR_SIZE_BYTES, emptyHabitForm } from "../types";
 
+const QUEUE_STORAGE_KEY = "habit-tracker-queued-habits";
+
+function getQueuedHabits(): Habit[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(QUEUE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Habit[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistQueuedHabits(habits: Habit[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(habits));
+}
+
 function validateAvatarFile(file: File): string | null {
   if (!file.type.startsWith("image/")) {
     return "Please choose a valid image file.";
@@ -37,6 +60,8 @@ function HabitListPanel({
   setForm,
   editingId,
   resetForm,
+  queuedCount,
+  isOnline,
 }: {
   habits: Habit[];
   loading: boolean;
@@ -48,16 +73,35 @@ function HabitListPanel({
   setForm: Dispatch<SetStateAction<HabitForm>>;
   editingId: number | null;
   resetForm: () => void;
+  queuedCount: number;
+  isOnline: boolean;
 }) {
-  // throw new Error("Testing Error Boundary");
   return (
     <section className="rounded-3xl border border-neutral-300 bg-white p-5 shadow-sm">
       <div className="mb-5 flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-neutral-950">Your habits</h2>
-        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-700">
-          {habits.length} total
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+              isOnline
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {isOnline ? "Online" : "Offline"}
+          </span>
+          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-700">
+            {habits.length} total
+          </span>
+          <h1>Habit Tracker v2</h1>
+        </div>
       </div>
+
+      {queuedCount > 0 ? (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {queuedCount} habit{queuedCount > 1 ? "s" : ""} queued to sync.
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-600">
@@ -102,6 +146,12 @@ function HabitListPanel({
                     <p className="mt-2 text-sm text-neutral-600">
                       {habit.description}
                     </p>
+                  ) : null}
+
+                  {habit.id < 0 ? (
+                    <span className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-700">
+                      queued
+                    </span>
                   ) : null}
                 </div>
 
@@ -172,11 +222,51 @@ export default function HabitTracker() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  const [queuedHabits, setQueuedHabits] = useState<Habit[]>(() =>
+    getQueuedHabits(),
+  );
+  const [shareStatus, setShareStatus] = useState("");
 
   const completedCount = useMemo(
     () => habits.filter((habit) => habit.completed).length,
     [habits],
   );
+
+  const syncQueuedHabits = async () => {
+    if (!session || !navigator.onLine || queuedHabits.length === 0) {
+      return;
+    }
+
+    const pending = [...queuedHabits];
+
+    for (const queuedHabit of pending) {
+      try {
+        await supabaseFetch("/rest/v1/habits", {
+          method: "POST",
+          body: {
+            user_id: session.user.id,
+            name: queuedHabit.name,
+            description: queuedHabit.description,
+            completed: queuedHabit.completed,
+          },
+        });
+
+        setQueuedHabits((current) => {
+          const next = current.filter((habit) => habit.id !== queuedHabit.id);
+          persistQueuedHabits(next);
+          return next;
+        });
+      } catch (syncError) {
+        console.warn("Queued habit sync failed.", syncError);
+        return;
+      }
+    }
+
+    await loadHabits(session);
+  };
 
   const loadHabits = async (activeSession: Session) => {
     try {
@@ -298,6 +388,27 @@ export default function HabitTracker() {
   }, []);
 
   useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (session) {
+        void syncQueuedHabits();
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [session, queuedHabits]);
+
+  useEffect(() => {
     return () => {
       if (previewUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
@@ -333,6 +444,22 @@ export default function HabitTracker() {
         description: form.description.trim(),
         completed: form.completed,
       };
+
+      if (!navigator.onLine) {
+        const queuedHabit: Habit = {
+          id: -Date.now(),
+          ...payload,
+          created_at: new Date().toISOString(),
+        };
+
+        const nextQueuedHabits = [queuedHabit, ...queuedHabits];
+        setQueuedHabits(nextQueuedHabits);
+        persistQueuedHabits(nextQueuedHabits);
+        setHabits((current) => [queuedHabit, ...current]);
+        setShareStatus("Habit saved offline and queued for sync.");
+        resetForm();
+        return;
+      }
 
       if (editingId) {
         await supabaseFetch("/rest/v1/habits", {
@@ -411,6 +538,14 @@ export default function HabitTracker() {
           user_id: `eq.${session.user.id}`,
         },
       });
+
+      if (habit.id < 0) {
+        const nextQueuedHabits = queuedHabits.filter(
+          (item) => item.id !== habit.id,
+        );
+        setQueuedHabits(nextQueuedHabits);
+        persistQueuedHabits(nextQueuedHabits);
+      }
 
       await loadHabits(session);
     } catch (deleteError) {
@@ -491,6 +626,34 @@ export default function HabitTracker() {
     }
   };
 
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Habit Tracker",
+          text: "Check out my routine progress.",
+          url: shareUrl,
+        });
+        setShareStatus("Share sheet opened.");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareStatus("Link copied to clipboard.");
+        return;
+      }
+
+      setShareStatus("Sharing is unavailable in this browser.");
+    } catch (shareError) {
+      if (shareError instanceof Error && shareError.name !== "AbortError") {
+        setShareStatus(shareError.message);
+      }
+    }
+  };
+
   const handleSignOut = async () => {
     setError("");
     const { error: signOutError } = await supabase.auth.signOut();
@@ -563,12 +726,27 @@ export default function HabitTracker() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {avatarError ? (
                 <div className="max-w-xs rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {avatarError}
                 </div>
               ) : null}
+
+              {shareStatus ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                  {shareStatus}
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                Share
+              </button>
+
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -580,7 +758,7 @@ export default function HabitTracker() {
           </header>
         </ErrorBoundary>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_2fr]">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_2fr]">
           <div className="space-y-6">
             <ErrorBoundary
               fallback={(reset) => (
@@ -713,7 +891,7 @@ export default function HabitTracker() {
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-neutral-500">
                   Summary
                 </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
                       Total
@@ -771,6 +949,8 @@ export default function HabitTracker() {
               setForm={setForm}
               editingId={editingId}
               resetForm={resetForm}
+              queuedCount={queuedHabits.length}
+              isOnline={isOnline}
             />
           </ErrorBoundary>
         </div>
