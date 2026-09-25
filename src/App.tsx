@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import AuthPage from "./components/AuthPage";
-import HabitTracker from "./components/HabitTracker";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UpdateToast from "./components/UpdateToast";
+
+const AuthPage = lazy(() => import("./components/AuthPage"));
+const HabitTracker = lazy(() => import("./components/HabitTracker"));
+
+const routeLoadingFallback = (
+  <div className="flex min-h-screen items-center justify-center bg-neutral-100 text-sm font-medium text-neutral-600">
+    Loading page...
+  </div>
+);
 
 function App() {
   const [isOnline, setIsOnline] = useState(
@@ -26,17 +33,19 @@ function App() {
   return (
     <>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<AuthPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <HabitTracker />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <Suspense fallback={routeLoadingFallback}>
+          <Routes>
+            <Route path="/login" element={<AuthPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <HabitTracker />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
 
       <UpdateToast />

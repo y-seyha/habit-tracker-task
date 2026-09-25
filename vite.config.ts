@@ -76,4 +76,29 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return undefined;
+          }
+
+          if (id.includes("react") || id.includes("react-dom")) {
+            return "react-vendor";
+          }
+
+          if (id.includes("@supabase")) {
+            return "supabase";
+          }
+
+          if (id.includes("react-router-dom")) {
+            return "router";
+          }
+
+          return "vendor";
+        },
+      },
+    },
+  },
 });
