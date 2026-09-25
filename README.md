@@ -98,33 +98,33 @@ This app is intentionally designed around per-user security. Every habit query, 
 
 ### Signed-in account → habit list
 
-![userA](./src/assets/userA.png)
+![userA](./src/assets/proof/userA.png)
 
 ### Second account → empty habit list
 
-![userB](./src/assets/userB.png)
+![userB](./src/assets/proof/userB.png)
 
 ### SQL Editor → both policies
 
-![policy](./src/assets/policy.png)
+![policy](./src/assets/proof/policy.png)
 
 ## Screenshot of Media and Resilince Task
 
 ### Avatar Preview State
 
-![userA](./src/assets/profile.png)
+![userA](./src/assets/proof/profile.png)
 
 ### Rejected File Message
 
-![userB](./src/assets/reject-file.png)
+![userB](./src/assets/proof/reject-file.png)
 
 ### Avatar Rendered on Fresh Load
 
-![policy](./src/assets/profile.png)
+![policy](./src/assets/proof/profile.png)
 
 ### Error Boundary in Action
 
-![policy](./src/assets/error-boundary.png)
+![policy](./src/assets/proof/error-boundary.png)
 
 ### One Sentence
 

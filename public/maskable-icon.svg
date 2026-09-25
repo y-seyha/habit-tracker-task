@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Habit Tracker maskable icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="144" fill="url(#bg)"/>
+  <rect x="96" y="96" width="320" height="320" rx="84" fill="#ffffff" fill-opacity="0.12"/>
+  <path d="M154 258h204c18 0 32 14 32 32v18c0 18-14 32-32 32H154c-18 0-32-14-32-32v-18c0-18 14-32 32-32Z" fill="#ffffff"/>
+  <path d="M166 212h180c28 0 50 22 50 50v30H116v-30c0-28 22-50 50-50Z" fill="#fff" opacity="0.9"/>
+  <circle cx="256" cy="229" r="40" fill="#fbbf24"/>
+</svg>
